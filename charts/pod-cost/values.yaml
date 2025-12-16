@@ -14,6 +14,7 @@ config:
   apiEndpoint: "https://podcost.io/api/ingest"
   collectionInterval: 60  # seconds
   clusterName: "rancher-desktop"
+  customerId: ""  # Optional: if empty, a UUID will be auto-generated on first install
 
 resources:
   requests:
