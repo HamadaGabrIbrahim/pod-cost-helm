@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pod-cost
+description: A Helm chart for Kubernetes metrics collection agent
+type: application
+version: 0.1.0
+appVersion: "1.0"

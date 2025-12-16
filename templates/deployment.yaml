@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pod-cost.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pod-cost.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pod-cost.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pod-cost.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              pip install --no-cache-dir kubernetes requests && python /app/agent.py
+          env:
+            - name: API_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: API_ENDPOINT
+            - name: COLLECTION_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: COLLECTION_INTERVAL
+            - name: CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: CLUSTER_NAME
+          volumeMounts:
+            - name: agent-script
+              mountPath: /app
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: agent-script
+          configMap:
+            name: {{ include "pod-cost.fullname" . }}-script
