@@ -29,6 +29,7 @@ data:
     API_ENDPOINT = os.getenv("API_ENDPOINT")
     COLLECTION_INTERVAL = int(os.getenv("COLLECTION_INTERVAL", "60"))
     CLUSTER_NAME = os.getenv("CLUSTER_NAME", "unknown-cluster")
+    CUSTOMER_ID = os.getenv("CUSTOMER_ID")
 
     def get_node_metrics():
         """Collect node-level metrics"""
@@ -109,6 +110,7 @@ data:
     def send_metrics_to_api(node_metrics, pod_metrics):
         """Send collected metrics to the API"""
         payload = {
+            "customer_id": CUSTOMER_ID,
             "cluster_name": CLUSTER_NAME,
             "timestamp": datetime.utcnow().isoformat(),
             "node_metrics": node_metrics,
@@ -134,7 +136,7 @@ data:
             return False
 
     def main():
-        logger.info(f"Starting metrics agent for cluster: {CLUSTER_NAME}")
+        logger.info(f"Starting metrics agent for customer: {CUSTOMER_ID}, cluster: {CLUSTER_NAME}")
         logger.info(f"Collection interval: {COLLECTION_INTERVAL} seconds")
 
         while True:
