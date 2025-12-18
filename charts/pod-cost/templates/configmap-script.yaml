@@ -29,10 +29,10 @@ data:
     API_ENDPOINT = os.getenv("API_ENDPOINT")
     COLLECTION_INTERVAL = int(os.getenv("COLLECTION_INTERVAL", "60"))
     CLUSTER_NAME = os.getenv("CLUSTER_NAME", "unknown-cluster")
-    CUSTOMER_ID = os.getenv("CUSTOMER_ID")
+    API_KEY = os.getenv("API_KEY")
 
     def get_node_metrics():
-        """Collect node-level metrics"""
+        """Collect node-level metrics including health data"""
         try:
             nodes = v1.list_node()
             node_metrics = metrics_client.list_cluster_custom_object(
@@ -49,6 +49,17 @@ data:
                     None
                 )
 
+                # Extract node conditions for health monitoring
+                conditions = []
+                if node.status.conditions:
+                    for condition in node.status.conditions:
+                        conditions.append({
+                            "type": condition.type,
+                            "status": condition.status,
+                            "reason": condition.reason or "",
+                            "message": condition.message or ""
+                        })
+
                 if node_metric:
                     metrics.append({
                         "node_name": node_name,
@@ -58,6 +69,8 @@ data:
                         "capacity_memory": node.status.capacity.get("memory", "0"),
                         "allocatable_cpu": node.status.allocatable.get("cpu", "0"),
                         "allocatable_memory": node.status.allocatable.get("memory", "0"),
+                        "conditions": conditions,
+                        "unschedulable": node.spec.unschedulable or False,
                     })
 
             return metrics
@@ -65,8 +78,34 @@ data:
             logger.error(f"Error getting node metrics: {e}")
             return []
 
+    def get_container_state(container_status):
+        """Extract container state from container status"""
+        if container_status.state:
+            if container_status.state.running:
+                return "running"
+            elif container_status.state.waiting:
+                reason = container_status.state.waiting.reason or "waiting"
+                return reason  # e.g., "CrashLoopBackOff", "ImagePullBackOff"
+            elif container_status.state.terminated:
+                return "terminated"
+        return "unknown"
+
+    def get_pod_status(pod):
+        """Determine overall pod status including container states"""
+        phase = pod.status.phase or "Unknown"
+
+        # Check container statuses for more specific status
+        if pod.status.container_statuses:
+            for cs in pod.status.container_statuses:
+                if cs.state and cs.state.waiting:
+                    reason = cs.state.waiting.reason
+                    if reason in ["CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError"]:
+                        return reason
+
+        return phase
+
     def get_pod_metrics():
-        """Collect pod-level metrics"""
+        """Collect pod-level metrics including health data"""
         try:
             pods = v1.list_pod_for_all_namespaces()
             pod_metrics = metrics_client.list_cluster_custom_object(
@@ -85,22 +124,64 @@ data:
                     None
                 )
 
-                if pod_metric and pod.status.phase == "Running":
-                    container_metrics = []
-                    for container in pod_metric.get("containers", []):
-                        container_metrics.append({
-                            "name": container["name"],
-                            "cpu_usage": container["usage"]["cpu"],
-                            "memory_usage": container["usage"]["memory"]
+                # Calculate total restart count
+                total_restarts = 0
+                if pod.status.container_statuses:
+                    for cs in pod.status.container_statuses:
+                        total_restarts += cs.restart_count or 0
+
+                # Extract pod conditions
+                conditions = []
+                if pod.status.conditions:
+                    for condition in pod.status.conditions:
+                        conditions.append({
+                            "type": condition.type,
+                            "status": condition.status,
+                            "reason": condition.reason or "",
+                            "message": condition.message or ""
                         })
 
-                    metrics.append({
-                        "pod_name": pod_name,
-                        "namespace": namespace,
-                        "node_name": pod.spec.node_name,
-                        "containers": container_metrics,
-                        "labels": pod.metadata.labels or {}
-                    })
+                # Build container metrics with health data
+                container_metrics = []
+                container_statuses = {cs.name: cs for cs in (pod.status.container_statuses or [])}
+
+                if pod_metric:
+                    for container in pod_metric.get("containers", []):
+                        container_name = container["name"]
+                        cs = container_statuses.get(container_name)
+
+                        container_metrics.append({
+                            "name": container_name,
+                            "cpu_usage": container["usage"]["cpu"],
+                            "memory_usage": container["usage"]["memory"],
+                            "state": get_container_state(cs) if cs else "unknown",
+                            "restart_count": cs.restart_count if cs else 0,
+                            "ready": cs.ready if cs else False
+                        })
+                else:
+                    # No metrics available, but still include container health data
+                    for cs in (pod.status.container_statuses or []):
+                        container_metrics.append({
+                            "name": cs.name,
+                            "cpu_usage": "0",
+                            "memory_usage": "0",
+                            "state": get_container_state(cs),
+                            "restart_count": cs.restart_count or 0,
+                            "ready": cs.ready or False
+                        })
+
+                # Include all pods, not just running ones (for health tracking)
+                metrics.append({
+                    "pod_name": pod_name,
+                    "namespace": namespace,
+                    "node_name": pod.spec.node_name or "",
+                    "status": get_pod_status(pod),
+                    "phase": pod.status.phase or "Unknown",
+                    "restart_count": total_restarts,
+                    "conditions": conditions,
+                    "containers": container_metrics,
+                    "labels": pod.metadata.labels or {}
+                })
 
             return metrics
         except Exception as e:
@@ -108,9 +189,8 @@ data:
             return []
 
     def send_metrics_to_api(node_metrics, pod_metrics):
-        """Send collected metrics to the API"""
+        """Send collected metrics to the API with authentication"""
         payload = {
-            "customer_id": CUSTOMER_ID,
             "cluster_name": CLUSTER_NAME,
             "timestamp": datetime.utcnow().isoformat(),
             "node_metrics": node_metrics,
@@ -118,7 +198,8 @@ data:
         }
 
         headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
         }
 
         try:
@@ -133,11 +214,21 @@ data:
             return True
         except requests.exceptions.RequestException as e:
             logger.error(f"Error sending metrics to API: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Response: {e.response.text}")
             return False
 
     def main():
-        logger.info(f"Starting metrics agent for customer: {CUSTOMER_ID}, cluster: {CLUSTER_NAME}")
+        logger.info(f"Starting PodCost metrics agent")
+        logger.info(f"Cluster: {CLUSTER_NAME}")
+        logger.info(f"API Endpoint: {API_ENDPOINT}")
         logger.info(f"Collection interval: {COLLECTION_INTERVAL} seconds")
+
+        if not API_KEY:
+            logger.error("API_KEY is not set. Please configure your API key from podcost.io dashboard.")
+            return
+
+        logger.info("API key configured - using authenticated mode")
 
         while True:
             try:
