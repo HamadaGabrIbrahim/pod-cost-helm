@@ -23,6 +23,9 @@ data:
 
     # Initialize clients
     v1 = client.CoreV1Api()
+    apps_v1 = client.AppsV1Api()
+    batch_v1 = client.BatchV1Api()
+    networking_v1 = client.NetworkingV1Api()
     metrics_client = client.CustomObjectsApi()
 
     # Configuration
@@ -188,13 +191,191 @@ data:
             logger.error(f"Error getting pod metrics: {e}")
             return []
 
-    def send_metrics_to_api(node_metrics, pod_metrics):
+    def get_namespace_list():
+        """Collect all namespaces"""
+        try:
+            namespaces = v1.list_namespace()
+            return [{
+                "name": ns.metadata.name,
+                "status": ns.status.phase,
+                "labels": ns.metadata.labels or {},
+                "created_at": ns.metadata.creation_timestamp.isoformat() if ns.metadata.creation_timestamp else None
+            } for ns in namespaces.items]
+        except Exception as e:
+            logger.error(f"Error getting namespaces: {e}")
+            return []
+
+    def get_deployments():
+        """Collect all deployments"""
+        try:
+            deployments = apps_v1.list_deployment_for_all_namespaces()
+            return [{
+                "name": d.metadata.name,
+                "namespace": d.metadata.namespace,
+                "replicas": d.spec.replicas or 0,
+                "ready_replicas": d.status.ready_replicas or 0,
+                "available_replicas": d.status.available_replicas or 0,
+                "labels": d.metadata.labels or {},
+                "selector": d.spec.selector.match_labels if d.spec.selector else {}
+            } for d in deployments.items]
+        except Exception as e:
+            logger.error(f"Error getting deployments: {e}")
+            return []
+
+    def get_statefulsets():
+        """Collect all statefulsets"""
+        try:
+            statefulsets = apps_v1.list_stateful_set_for_all_namespaces()
+            return [{
+                "name": ss.metadata.name,
+                "namespace": ss.metadata.namespace,
+                "replicas": ss.spec.replicas or 0,
+                "ready_replicas": ss.status.ready_replicas or 0,
+                "labels": ss.metadata.labels or {},
+                "selector": ss.spec.selector.match_labels if ss.spec.selector else {}
+            } for ss in statefulsets.items]
+        except Exception as e:
+            logger.error(f"Error getting statefulsets: {e}")
+            return []
+
+    def get_daemonsets():
+        """Collect all daemonsets"""
+        try:
+            daemonsets = apps_v1.list_daemon_set_for_all_namespaces()
+            return [{
+                "name": ds.metadata.name,
+                "namespace": ds.metadata.namespace,
+                "desired_number_scheduled": ds.status.desired_number_scheduled or 0,
+                "current_number_scheduled": ds.status.current_number_scheduled or 0,
+                "number_ready": ds.status.number_ready or 0,
+                "labels": ds.metadata.labels or {}
+            } for ds in daemonsets.items]
+        except Exception as e:
+            logger.error(f"Error getting daemonsets: {e}")
+            return []
+
+    def get_jobs():
+        """Collect all jobs"""
+        try:
+            jobs = batch_v1.list_job_for_all_namespaces()
+            return [{
+                "name": j.metadata.name,
+                "namespace": j.metadata.namespace,
+                "active": j.status.active or 0,
+                "succeeded": j.status.succeeded or 0,
+                "failed": j.status.failed or 0,
+                "completions": j.spec.completions or 1,
+                "labels": j.metadata.labels or {}
+            } for j in jobs.items]
+        except Exception as e:
+            logger.error(f"Error getting jobs: {e}")
+            return []
+
+    def get_cronjobs():
+        """Collect all cronjobs"""
+        try:
+            cronjobs = batch_v1.list_cron_job_for_all_namespaces()
+            return [{
+                "name": cj.metadata.name,
+                "namespace": cj.metadata.namespace,
+                "schedule": cj.spec.schedule,
+                "suspend": cj.spec.suspend or False,
+                "active_jobs": len(cj.status.active) if cj.status.active else 0,
+                "last_schedule_time": cj.status.last_schedule_time.isoformat() if cj.status.last_schedule_time else None,
+                "labels": cj.metadata.labels or {}
+            } for cj in cronjobs.items]
+        except Exception as e:
+            logger.error(f"Error getting cronjobs: {e}")
+            return []
+
+    def get_services():
+        """Collect all services"""
+        try:
+            services = v1.list_service_for_all_namespaces()
+            return [{
+                "name": svc.metadata.name,
+                "namespace": svc.metadata.namespace,
+                "type": svc.spec.type,
+                "cluster_ip": svc.spec.cluster_ip,
+                "external_ips": svc.spec.external_i_ps or [],
+                "ports": [{"port": p.port, "target_port": str(p.target_port), "protocol": p.protocol} for p in (svc.spec.ports or [])],
+                "selector": svc.spec.selector or {},
+                "labels": svc.metadata.labels or {}
+            } for svc in services.items]
+        except Exception as e:
+            logger.error(f"Error getting services: {e}")
+            return []
+
+    def get_configmaps():
+        """Collect all configmaps (metadata only, not data for security)"""
+        try:
+            configmaps = v1.list_config_map_for_all_namespaces()
+            return [{
+                "name": cm.metadata.name,
+                "namespace": cm.metadata.namespace,
+                "data_keys": list(cm.data.keys()) if cm.data else [],
+                "labels": cm.metadata.labels or {}
+            } for cm in configmaps.items]
+        except Exception as e:
+            logger.error(f"Error getting configmaps: {e}")
+            return []
+
+    def get_pvcs():
+        """Collect all PersistentVolumeClaims"""
+        try:
+            pvcs = v1.list_persistent_volume_claim_for_all_namespaces()
+            return [{
+                "name": pvc.metadata.name,
+                "namespace": pvc.metadata.namespace,
+                "status": pvc.status.phase,
+                "storage_class": pvc.spec.storage_class_name,
+                "capacity": pvc.status.capacity.get("storage") if pvc.status.capacity else None,
+                "access_modes": pvc.spec.access_modes or [],
+                "labels": pvc.metadata.labels or {}
+            } for pvc in pvcs.items]
+        except Exception as e:
+            logger.error(f"Error getting pvcs: {e}")
+            return []
+
+    def get_ingresses():
+        """Collect all ingresses"""
+        try:
+            ingresses = networking_v1.list_ingress_for_all_namespaces()
+            return [{
+                "name": ing.metadata.name,
+                "namespace": ing.metadata.namespace,
+                "class_name": ing.spec.ingress_class_name,
+                "hosts": [rule.host for rule in (ing.spec.rules or []) if rule.host],
+                "tls": [{"hosts": tls.hosts, "secret_name": tls.secret_name} for tls in (ing.spec.tls or [])],
+                "labels": ing.metadata.labels or {}
+            } for ing in ingresses.items]
+        except Exception as e:
+            logger.error(f"Error getting ingresses: {e}")
+            return []
+
+    def get_all_resources():
+        """Collect all extended resource metrics"""
+        return {
+            "namespaces": get_namespace_list(),
+            "deployments": get_deployments(),
+            "statefulsets": get_statefulsets(),
+            "daemonsets": get_daemonsets(),
+            "jobs": get_jobs(),
+            "cronjobs": get_cronjobs(),
+            "services": get_services(),
+            "configmaps": get_configmaps(),
+            "pvcs": get_pvcs(),
+            "ingresses": get_ingresses()
+        }
+
+    def send_metrics_to_api(node_metrics, pod_metrics, resource_metrics):
         """Send collected metrics to the API with authentication"""
         payload = {
             "cluster_name": CLUSTER_NAME,
             "timestamp": datetime.utcnow().isoformat(),
             "node_metrics": node_metrics,
-            "pod_metrics": pod_metrics
+            "pod_metrics": pod_metrics,
+            "resource_metrics": resource_metrics
         }
 
         headers = {
@@ -236,11 +417,12 @@ data:
 
                 node_metrics = get_node_metrics()
                 pod_metrics = get_pod_metrics()
+                resource_metrics = get_all_resources()
 
-                logger.info(f"Collected metrics for {len(node_metrics)} nodes and {len(pod_metrics)} pods")
+                logger.info(f"Collected metrics for {len(node_metrics)} nodes, {len(pod_metrics)} pods, and {len(resource_metrics.get('deployments', []))} deployments")
 
                 if node_metrics or pod_metrics:
-                    send_metrics_to_api(node_metrics, pod_metrics)
+                    send_metrics_to_api(node_metrics, pod_metrics, resource_metrics)
                 else:
                     logger.warning("No metrics collected")
 
