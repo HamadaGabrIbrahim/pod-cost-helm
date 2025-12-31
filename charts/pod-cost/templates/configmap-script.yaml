@@ -320,21 +320,6 @@ data:
             logger.error(f"Error getting configmaps: {e}")
             return []
 
-    def get_secrets():
-        """Collect all secrets (metadata only, NEVER data for security)"""
-        try:
-            secrets = v1.list_secret_for_all_namespaces()
-            return [{
-                "name": s.metadata.name,
-                "namespace": s.metadata.namespace,
-                "type": s.type,
-                "data_keys": list(s.data.keys()) if s.data else [],
-                "labels": s.metadata.labels or {}
-            } for s in secrets.items]
-        except Exception as e:
-            logger.error(f"Error getting secrets: {e}")
-            return []
-
     def get_pvcs():
         """Collect all PersistentVolumeClaims"""
         try:
@@ -379,7 +364,6 @@ data:
             "cronjobs": get_cronjobs(),
             "services": get_services(),
             "configmaps": get_configmaps(),
-            "secrets": get_secrets(),
             "pvcs": get_pvcs(),
             "ingresses": get_ingresses()
         }
