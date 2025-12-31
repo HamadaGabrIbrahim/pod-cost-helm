@@ -46,6 +46,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "pod-cost.fullname" . }}-secret
                   key: API_KEY
+            - name: REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: REGION
           volumeMounts:
             - name: agent-script
               mountPath: /app

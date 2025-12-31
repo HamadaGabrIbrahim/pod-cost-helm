@@ -10,3 +10,4 @@ data:
   API_ENDPOINT: {{ .Values.config.apiEndpoint | quote }}
   COLLECTION_INTERVAL: {{ .Values.config.collectionInterval | quote }}
   CLUSTER_NAME: {{ .Values.config.clusterName | quote }}
+  REGION: {{ .Values.config.region | quote }}
