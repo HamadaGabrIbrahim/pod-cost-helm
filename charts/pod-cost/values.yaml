@@ -11,7 +11,7 @@ serviceAccount:
   name: pod-cost
 
 config:
-  apiEndpoint: "https://ingest.podcost.io/api/ingest"
+  apiEndpoint: "https://ingest.podcost.io/v1"
   collectionInterval: 60  # seconds
   clusterName: ""  # Will be set from kubectl context or provided by user
   apiKey: ""  # Required - get from podcost.io dashboard
