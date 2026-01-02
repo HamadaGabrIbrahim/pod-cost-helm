@@ -16,6 +16,7 @@ config:
   clusterName: ""  # Will be set from kubectl context or provided by user
   apiKey: ""  # Required - get from podcost.io dashboard
   region: "us-east-1"  # AWS region for pricing (e.g., us-east-1, eu-west-1)
+  cloudProvider: "aws-eks"  # Cloud provider: aws-eks, gcp-gke, azure-aks
 
 resources:
   requests:

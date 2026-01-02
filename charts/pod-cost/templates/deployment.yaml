@@ -51,6 +51,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "pod-cost.fullname" . }}-config
                   key: REGION
+            - name: CLOUD_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: CLOUD_PROVIDER
+            - name: CHART_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: CHART_VERSION
           volumeMounts:
             - name: agent-script
               mountPath: /app

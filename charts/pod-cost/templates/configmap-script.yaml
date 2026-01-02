@@ -33,6 +33,8 @@ data:
     COLLECTION_INTERVAL = int(os.getenv("COLLECTION_INTERVAL", "60"))
     CLUSTER_NAME = os.getenv("CLUSTER_NAME", "unknown-cluster")
     API_KEY = os.getenv("API_KEY")
+    CLOUD_PROVIDER = os.getenv("CLOUD_PROVIDER", "aws-eks")
+    CHART_VERSION = os.getenv("CHART_VERSION", "")
 
     def get_node_metrics():
         """Collect node-level metrics including health data"""
@@ -375,7 +377,9 @@ data:
             "timestamp": datetime.utcnow().isoformat(),
             "node_metrics": node_metrics,
             "pod_metrics": pod_metrics,
-            "resource_metrics": resource_metrics
+            "resource_metrics": resource_metrics,
+            "cloud_provider": CLOUD_PROVIDER,
+            "chart_version": CHART_VERSION
         }
 
         headers = {
@@ -402,6 +406,8 @@ data:
     def main():
         logger.info(f"Starting PodCost metrics agent")
         logger.info(f"Cluster: {CLUSTER_NAME}")
+        logger.info(f"Cloud Provider: {CLOUD_PROVIDER}")
+        logger.info(f"Chart Version: {CHART_VERSION}")
         logger.info(f"API Endpoint: {API_ENDPOINT}")
         logger.info(f"Collection interval: {COLLECTION_INTERVAL} seconds")
 
