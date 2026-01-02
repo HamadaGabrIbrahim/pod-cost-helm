@@ -20,11 +20,6 @@ spec:
         - name: agent
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/bin/sh"]
-          args:
-            - -c
-            - |
-              pip install --no-cache-dir kubernetes requests && python /app/agent.py
           env:
             - name: API_ENDPOINT
               valueFrom:
@@ -61,12 +56,5 @@ spec:
                 configMapKeyRef:
                   name: {{ include "pod-cost.fullname" . }}-config
                   key: CHART_VERSION
-          volumeMounts:
-            - name: agent-script
-              mountPath: /app
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      volumes:
-        - name: agent-script
-          configMap:
-            name: {{ include "pod-cost.fullname" . }}-script

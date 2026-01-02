@@ -2,9 +2,9 @@
 replicaCount: 1
 
 image:
-  repository: python
-  tag: "3.11-slim"
-  pullPolicy: IfNotPresent
+  repository: podcost/agent
+  tag: "latest"
+  pullPolicy: Always
 
 serviceAccount:
   create: true
