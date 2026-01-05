@@ -17,6 +17,9 @@ config:
   apiKey: ""  # Required - get from podcost.io dashboard
   region: "us-east-1"  # AWS region for pricing (e.g., us-east-1, eu-west-1)
   cloudProvider: "aws-eks"  # Cloud provider: aws-eks, gcp-gke, azure-aks
+  # GPU metrics configuration
+  enableGpuMetrics: true  # Enable GPU metrics collection (requires nvidia.com/gpu resources)
+  dcgmEndpoint: ""  # DCGM Exporter endpoint (e.g., http://dcgm-exporter:9400/metrics)
 
 resources:
   requests:
