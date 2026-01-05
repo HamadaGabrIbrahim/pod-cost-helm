@@ -13,3 +13,5 @@ data:
   REGION: {{ .Values.config.region | quote }}
   CLOUD_PROVIDER: {{ .Values.config.cloudProvider | quote }}
   CHART_VERSION: {{ .Chart.Version | quote }}
+  ENABLE_GPU_METRICS: {{ .Values.config.enableGpuMetrics | quote }}
+  DCGM_ENDPOINT: {{ .Values.config.dcgmEndpoint | quote }}

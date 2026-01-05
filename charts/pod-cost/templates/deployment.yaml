@@ -56,5 +56,15 @@ spec:
                 configMapKeyRef:
                   name: {{ include "pod-cost.fullname" . }}-config
                   key: CHART_VERSION
+            - name: ENABLE_GPU_METRICS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: ENABLE_GPU_METRICS
+            - name: DCGM_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "pod-cost.fullname" . }}-config
+                  key: DCGM_ENDPOINT
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
