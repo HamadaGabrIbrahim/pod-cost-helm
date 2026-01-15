@@ -11,7 +11,7 @@ rules:
     resources: ["nodes", "pods", "namespaces"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources: ["services", "configmaps", "secrets", "persistentvolumeclaims"]
+    resources: ["services", "configmaps", "persistentvolumeclaims"]
     verbs: ["get", "list"]
   # Metrics API
   - apiGroups: ["metrics.k8s.io"]
