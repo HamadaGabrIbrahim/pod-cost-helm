@@ -3,6 +3,16 @@ entries:
   pod-cost:
   - apiVersion: v2
     appVersion: "2.0"
+    created: "2026-01-15T03:26:24.169008486Z"
+    description: A Helm chart for Kubernetes metrics collection agent
+    digest: 2495e2f2f6638737fa458327615134f7536e594d7ec04a0d495c7b6e534d2881
+    name: pod-cost
+    type: application
+    urls:
+    - https://github.com/HamadaGabrIbrahim/pod-cost-helm/releases/download/pod-cost-1.1.1/pod-cost-1.1.1.tgz
+    version: 1.1.1
+  - apiVersion: v2
+    appVersion: "2.0"
     created: "2026-01-05T03:07:13.378197432Z"
     description: A Helm chart for Kubernetes metrics collection agent
     digest: 2f91af495778260f1c2c4ff29324cca6dbf1304c178d7e2307ab509934235c49
@@ -111,4 +121,4 @@ entries:
     urls:
     - https://github.com/HamadaGabrIbrahim/pod-cost-helm/releases/download/pod-cost-0.1.0/pod-cost-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-05T03:07:13.378241955Z"
+generated: "2026-01-15T03:26:24.169058792Z"
