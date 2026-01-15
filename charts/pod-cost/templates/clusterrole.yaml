@@ -11,7 +11,7 @@ rules:
     resources: ["nodes", "pods", "namespaces"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources: ["services", "configmaps", "persistentvolumeclaims"]
+    resources: ["services", "persistentvolumeclaims"]
     verbs: ["get", "list"]
   # Metrics API
   - apiGroups: ["metrics.k8s.io"]
@@ -20,12 +20,4 @@ rules:
   # Apps API resources (workloads)
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
-    verbs: ["get", "list"]
-  # Batch API resources
-  - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list"]
-  # Networking API resources
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses"]
     verbs: ["get", "list"]
