@@ -10,14 +10,11 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "pods", "namespaces"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["services", "persistentvolumeclaims"]
-    verbs: ["get", "list"]
   # Metrics API
   - apiGroups: ["metrics.k8s.io"]
     resources: ["nodes", "pods"]
     verbs: ["get", "list"]
   # Apps API resources (workloads)
   - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
     verbs: ["get", "list"]
